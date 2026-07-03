@@ -1,0 +1,36 @@
+name: Sync from Hub
+
+# Rebuilds secondbrian's EN/ZH landing pages from the hub's source of truth.
+# Runs daily ~20min after the hub's refresh-hub.yml (15:00 UTC), and on demand.
+on:
+  schedule:
+    - cron: '20 15 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-from-hub
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build EN/ZH pages from hub
+        run: bash build.sh
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html index.zh.html
+          if git diff --cached --quiet; then
+            echo "No changes — hub unchanged."
+          else
+            git commit -m "Sync landing pages from hub"
+            git push
+          fi
